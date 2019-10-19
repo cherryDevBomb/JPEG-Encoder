@@ -1,7 +1,6 @@
 package model;
 
 import java.io.*;
-import java.text.Format;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -31,6 +30,22 @@ public class PPMImage {
 
     public List<List<RGB>> getRgbData() {
         return rgbData;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    public void setMaxColorValue(int maxColorValue) {
+        this.maxColorValue = maxColorValue;
+    }
+
+    public void setRgbData(List<List<RGB>> rgbData) {
+        this.rgbData = rgbData;
     }
 
     public void readImage(String filename) {
@@ -68,7 +83,7 @@ public class PPMImage {
 
 
     public void writeToFile() {
-        File file = new File("output.ppm");
+        File file = new File("decodedImage.ppm");
         try {
             PrintWriter writer = new PrintWriter(new FileWriter(file));
 

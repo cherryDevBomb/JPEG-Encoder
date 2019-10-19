@@ -10,10 +10,10 @@ public class App {
 
         Encoder encoder = new Encoder();
         EncodedImage encodedImage = encoder.encode(image);
-        encodedImage.printImage();
+        encodedImage.printEncoded();
 
-//        Decoder decoder = new Decoder();
-//        PPMImage decodedImage = decoder.decode(encodedImage);
-//        image.writeToFile();
+        Decoder decoder = new Decoder();
+        PPMImage decodedImage = decoder.decode(encodedImage);
+        decodedImage.writeToFile();
     }
 }

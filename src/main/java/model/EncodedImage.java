@@ -1,5 +1,9 @@
 package model;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 
 public class EncodedImage {
@@ -14,15 +18,35 @@ public class EncodedImage {
         this.v = v;
     }
 
-    public void printImage() {
-        System.out.println("Y blocks:");
-        y.forEach(line -> line.forEach(Block::printBlock));
-
-        System.out.println("U blocks:");
-        u.forEach(line -> line.forEach(Block::printBlock));
-
-        System.out.println("V blocks:");
-        v.forEach(line -> line.forEach(Block::printBlock));
+    public List<List<Block>> getY() {
+        return y;
     }
 
+    public List<List<Block>> getU() {
+        return u;
+    }
+
+    public List<List<Block>> getV() {
+        return v;
+    }
+
+    public void printEncoded() {
+        File file = new File("encodedImage.txt");
+        try {
+            PrintWriter writer = new PrintWriter(new FileWriter(file));
+
+            writer.println("Y blocks:");
+            y.forEach(line -> line.forEach(block -> writer.println(block.toString())));
+
+            writer.println("U blocks:");
+            u.forEach(line -> line.forEach(block -> writer.println(block.toString())));
+
+            writer.println("V blocks:");
+            v.forEach(line -> line.forEach(block -> writer.println(block.toString())));
+
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

@@ -5,13 +5,13 @@ import java.util.List;
 
 public class Block {
 
-    private List<List<Double>> values;
+    private List<List<Integer>> values;
 
-    public Block(List<List<Double>> values) {
+    public Block(List<List<Integer>> values) {
         this.values = values;
     }
 
-    public List<List<Double>> getValues() {
+    public List<List<Integer>> getValues() {
         return values;
     }
 
@@ -19,8 +19,15 @@ public class Block {
         return values.size();
     }
 
-    public void printBlock() {
-        values.forEach(line -> line.forEach((v -> System.out.println(v + " "))));
-        System.out.println("\n");
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        for (List<Integer> line : values) {
+            for (Integer value : line) {
+                builder.append(value).append(" ");
+            }
+            builder.append("\n");
+        }
+        return builder.toString();
     }
 }
