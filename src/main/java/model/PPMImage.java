@@ -48,7 +48,7 @@ public class PPMImage {
         this.rgbData = rgbData;
     }
 
-    public void readImage(String filename) {
+    private void readImage(String filename) {
         File file = new File(getClass().getClassLoader().getResource(filename).getFile());
         Scanner scanner = null;
         try {
@@ -57,6 +57,7 @@ public class PPMImage {
             e.printStackTrace();
         }
 
+        assert scanner != null;
         if (scanner.hasNextLine()) {
             //read header
             FORMAT = scanner.nextLine();

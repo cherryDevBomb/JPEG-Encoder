@@ -15,6 +15,10 @@ public class Block {
         return values;
     }
 
+    public void setValues(List<List<Integer>> values) {
+        this.values = values;
+    }
+
     public int getSize() {
         return values.size();
     }
