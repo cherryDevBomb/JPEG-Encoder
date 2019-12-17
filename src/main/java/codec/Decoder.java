@@ -2,23 +2,26 @@ package codec;
 
 import model.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 
 public class Decoder {
 
     public PPMImage decode(EncodedImage image) {
 
-        //perform Entropy Decoding
-        List<Byte> byteArray = image.getEncodedBytes();
-        Map<String, List<List<Block>>> YUVBlocks = performEntropyDecoding(byteArray);
+        int nrBlocksW = image.getNrBlocksW();
+        int nrBlocksH = image.getGetNrBlocksH();
 
-        List<List<Block>> yBlocks = YUVBlocks.get("Y");
-        List<List<Block>> uBlocks = YUVBlocks.get("U");
-        List<List<Block>> vBlocks = YUVBlocks.get("V");
+        //perform Entropy Decoding
+        List<Integer> byteArray = image.getEncodedBytes();
+        List<Block> shuffledBlocks = performEntropyDecoding(byteArray);
+
+        Map<Integer, List<List<Block>>> YUVBlocks = orderBlocks(shuffledBlocks, nrBlocksW);
+        List<List<Block>> yBlocks = YUVBlocks.get(0);
+        List<List<Block>> uBlocks = YUVBlocks.get(1);
+        List<List<Block>> vBlocks = YUVBlocks.get(2);
 
         //perform Inverse Discrete Cosine Transform and deQuantization
         yBlocks.forEach(line -> line.forEach(block ->
@@ -32,8 +35,6 @@ public class Decoder {
         ));
 
         //build YUV matrices
-        int nrBlocksW = image.getNrBlocksW();
-        int nrBlocksH = image.getGetNrBlocksH();
         int width = nrBlocksW * 8;
         int height = nrBlocksH * 8;
         int[][] y = blocksToMatrix(yBlocks, nrBlocksW, nrBlocksH, width, height);
@@ -144,8 +145,32 @@ public class Decoder {
         return values;
     }
 
-    private Map<String, List<List<Block>>> performEntropyDecoding(List<Byte> byteArray) {
-        return null;
+    /**
+     * Iterate over the byte array and reconstruct the blocks by entropy decoding
+     *
+     * @param byteArray array of bytes obtained from the decoder
+     * @return list of blocks in shuffled order (an Y block followed by an U block followed by a V block)
+     */
+    private List<Block> performEntropyDecoding(List<Integer> byteArray) {
+        List<Block> blocks = new ArrayList<>();
+
+        int startIndex = 0;
+        int currentIndex = 1;
+        while (currentIndex < byteArray.size()) {
+            currentIndex++;
+            //63 tuples (runlength, size)(amplitude) were read or a set of 2 consecutive zeros (0,0) was found
+            if (currentIndex - startIndex == 63 * 3 + 1 ||
+                    (byteArray.get(currentIndex - 1) == 0 && byteArray.get(currentIndex) == 0)) {
+                List<Integer> blockBytes = byteArray.subList(startIndex, currentIndex + 1);
+                List<List<Integer>> blockValues = parseZigZag(performRunlengthDecoding(blockBytes));
+                Block block = new Block(blockValues);
+                blocks.add(block);
+
+                startIndex = ++currentIndex;
+                currentIndex++;
+            }
+        }
+        return blocks;
     }
 
     /**
@@ -154,25 +179,25 @@ public class Decoder {
      * @param byteArray sublist of the encoded byteArray that contains values from a single block
      * @return array of corresponding integer coefficients
      */
-    private List<Integer> performRunlengthDecoding(List<Byte> byteArray) {
+    private List<Integer> performRunlengthDecoding(List<Integer> byteArray) {
         List<Integer> result = new ArrayList<>();
 
         //read values corresponding to the DC coefficient
-        result.add(Byte.toUnsignedInt(byteArray.get(1)));
+        result.add(byteArray.get(1));
 
         //read values corresponding to all AC coefficients
-        for (int i = 2; i < byteArray.size()-2; i++) {
-            byte runlength = byteArray.get(i);
-            byte amplitude = byteArray.get(i+2);
+        for (int i = 2; i < byteArray.size()-2; i += 3) {
+            int runlength = byteArray.get(i);
+            int amplitude = byteArray.get(i+2);
             if (runlength != 0) {
                 for (int r = 0; r < runlength; r++) {
                     result.add(0);
                 }
             }
-            result.add(Byte.toUnsignedInt(amplitude));
+            result.add(amplitude);
         }
         //add missing zeros if array ends in (0,0)
-        if (byteArray.get(byteArray.size()-2) == 0 && byteArray.get(byteArray.size()-1) == 0) {
+        if (byteArray.get(byteArray.size() - 2) == 0 && byteArray.get(byteArray.size() - 1) == 0) {
             while (result.size() < 64) {
                 result.add(0);
             }
@@ -194,7 +219,7 @@ public class Decoder {
         List<List<Integer>> diagonals = new ArrayList<>();
         for (int i = 1; i < size * 2; i++) {
             int diagonalLength = i < size ? i : size * 2 - i;
-            diagonals.add(coefficients.subList(index, index + diagonalLength));
+            diagonals.add(new ArrayList<>(coefficients.subList(index, index + diagonalLength)));
             index += diagonalLength;
         }
 
@@ -203,31 +228,53 @@ public class Decoder {
             matrix.add(Arrays.asList(0,0,0,0,0,0,0,0));
         }
 
-//        for (int i = 0; i < size; i++) {
-//            for (int j = 0; j < size; j++) {
-//                int indexSum = i + j;
-//                if (indexSum % 2 == 0) {
-//                    matrix.get(i).set(j, diagonals.get(indexSum).get(diagonals.get(indexSum).size()-1));
-//                }
-//                else {
-//                    matrix.get(i).set(j, diagonals.get(indexSum).get(0));
-//                }
-//            }
-//        }
-
-//        for (int i = size-1; i >= 0; i--) {
-//            for (int j = size-1; j >= 0; j--) {
-//                int indexSum = i + j;
-//                if (indexSum % 2 == 0) {
-//                    matrix.get(i).set(j, diagonals.get(indexSum).get(0));
-//                }
-//                else {
-//                    matrix.get(i).set(j, diagonals.get(indexSum).get(diagonals.get(indexSum).size()-1));
-//                }
-//            }
-//        }
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                int indexSum = i + j;
+                if (indexSum % 2 == 0) {
+                    matrix.get(j).set(i, diagonals.get(indexSum).get(0));
+                    diagonals.get(indexSum).remove(0);
+                }
+                else {
+                    matrix.get(j).set(i, diagonals.get(indexSum).get(diagonals.get(indexSum).size()-1));
+                    diagonals.get(indexSum).remove(diagonals.get(indexSum).size()-1);
+                }
+            }
+        }
 
         return matrix;
+    }
+
+    /**
+     * Create the Y, U and V block matrices from a shuffled array of blocks
+     *
+     * @param shuffledBlocks list of blocks in shuffled order obtained after the entropy decoding
+     * @param nrBlocksW number of blocks in a row
+     * @return block matrices ordered as a map with 0, 1 and 2 as keys for Y, U and V respectively
+     */
+    private Map<Integer, List<List<Block>>> orderBlocks(List<Block> shuffledBlocks, int nrBlocksW) {
+        // initialize hashMap with empty arrays of blocks
+        Map<Integer, List<Block>> YUVArrays = new HashMap<>();
+        for (int i = 0; i < 3; i++) {
+            YUVArrays.put(i, new ArrayList<>());
+        }
+
+        //sort blocks and add to corresponding array
+        for (int i = 0; i < shuffledBlocks.size(); i++) {
+            YUVArrays.get(i % 3).add(shuffledBlocks.get(i));
+        }
+
+        //arrange blocks in matrices
+        Map<Integer, List<List<Block>>> YUVBlocks = new HashMap<>();
+        for (int i = 0; i < 3; i++) {
+            AtomicInteger counter = new AtomicInteger();
+            Collection<List<Block>> matrix = YUVArrays.get(i).stream()
+                    .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / nrBlocksW))
+                    .values();
+            YUVBlocks.put(i, new ArrayList<>(matrix));
+        }
+
+        return YUVBlocks;
     }
 
 

@@ -4,17 +4,17 @@ import java.util.List;
 
 public class EncodedImage {
 
-    private List<Byte> encodedBytes;
+    private List<Integer> encodedBytes;
     private int nrBlocksW;
     private int getNrBlocksH;
 
-    public EncodedImage(List<Byte> encodedBytes, int nrBlocksW, int getNrBlocksH) {
+    public EncodedImage(List<Integer> encodedBytes, int nrBlocksW, int getNrBlocksH) {
         this.encodedBytes = encodedBytes;
         this.nrBlocksW = nrBlocksW;
         this.getNrBlocksH = getNrBlocksH;
     }
 
-    public List<Byte> getEncodedBytes() {
+    public List<Integer> getEncodedBytes() {
         return encodedBytes;
     }
 

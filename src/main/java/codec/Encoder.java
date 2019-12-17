@@ -58,7 +58,7 @@ public class Encoder {
         ));
 
         //perform Entropy Encoding
-        List<Byte> encodedByteArray = performEntropyEncoding(yBlocks, uBlocks, vBlocks);
+        List<Integer> encodedByteArray = performEntropyEncoding(yBlocks, uBlocks, vBlocks);
 
         return new EncodedImage(encodedByteArray, nrBlocksW, nrBlocksH);
     }
@@ -211,8 +211,8 @@ public class Encoder {
      * @param vBlocks V blocks
      * @return resulting byte array
      */
-    private List<Byte> performEntropyEncoding(List<List<Block>> yBlocks, List<List<Block>> uBlocks, List<List<Block>> vBlocks) {
-        List<List<Byte>> byteArray = new ArrayList<>();
+    private List<Integer> performEntropyEncoding(List<List<Block>> yBlocks, List<List<Block>> uBlocks, List<List<Block>> vBlocks) {
+        List<List<Integer>> byteArray = new ArrayList<>();
 
         int nrBlocksH = yBlocks.size();
         int nrBlocksW = yBlocks.get(0).size();
@@ -264,20 +264,20 @@ public class Encoder {
      * @param coefficients an array of 64 integer values
      * @return encoded byte array
      */
-    private List<Byte> performRunLengthEncoding(List<Integer> coefficients) {
-        List<Byte> result = new ArrayList<>();
+    private List<Integer> performRunLengthEncoding(List<Integer> coefficients) {
+        List<Integer> result = new ArrayList<>();
 
         // add size and amplitude of the DC coefficient
-        result.add(countBits(coefficients.get(0)).byteValue());
-        result.add(coefficients.get(0).byteValue());
+        result.add(countBits(coefficients.get(0)));
+        result.add(coefficients.get(0));
 
         // add runlength, size and amplitude of all AC coefficients
         int runLengthCounter = 0;
         for (Integer elem : coefficients.subList(1, coefficients.size())) {
             if (elem != 0) {
-                result.add((byte) runLengthCounter);
-                result.add(countBits(elem).byteValue());
-                result.add(elem.byteValue());
+                result.add(runLengthCounter);
+                result.add(countBits(elem));
+                result.add(elem);
                 runLengthCounter = 0;
             }
             else {
@@ -286,8 +286,8 @@ public class Encoder {
         }
         // add (0,0) if the block ends with a consecutive sequence of zeroes
         if (runLengthCounter > 0) {
-            result.add((byte) 0);
-            result.add((byte) 0);
+            result.add(0);
+            result.add(0);
         }
 
         return result;
@@ -300,7 +300,7 @@ public class Encoder {
      * @return number of bits
      */
     private Integer countBits(int number) {
-        return (int) (Math.log(number) / Math.log(2) + 1);
+        return (int) (Math.log(Math.abs(number)) / Math.log(2) + 1);
     }
 
 
