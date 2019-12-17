@@ -3,16 +3,22 @@ package codec;
 import model.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 
 public class Decoder {
 
     public PPMImage decode(EncodedImage image) {
 
-        List<List<Block>> yBlocks = image.getY();
-        List<List<Block>> uBlocks = image.getU();
-        List<List<Block>> vBlocks = image.getV();
+        //perform Entropy Decoding
+        List<Byte> byteArray = image.getEncodedBytes();
+        Map<String, List<List<Block>>> YUVBlocks = performEntropyDecoding(byteArray);
+
+        List<List<Block>> yBlocks = YUVBlocks.get("Y");
+        List<List<Block>> uBlocks = YUVBlocks.get("U");
+        List<List<Block>> vBlocks = YUVBlocks.get("V");
 
         //perform Inverse Discrete Cosine Transform and deQuantization
         yBlocks.forEach(line -> line.forEach(block ->
@@ -26,8 +32,8 @@ public class Decoder {
         ));
 
         //build YUV matrices
-        int nrBlocksW = image.getY().get(0).size();
-        int nrBlocksH = image.getY().size();
+        int nrBlocksW = image.getNrBlocksW();
+        int nrBlocksH = image.getGetNrBlocksH();
         int width = nrBlocksW * 8;
         int height = nrBlocksH * 8;
         int[][] y = blocksToMatrix(yBlocks, nrBlocksW, nrBlocksH, width, height);
@@ -113,7 +119,7 @@ public class Decoder {
     /**
      * Transform an 8x8 DCT coefficient block into a Y/U/V block
      *
-     * @param block DCT coefficient block
+     * @param dctValues values of a DCT coefficient block matrix
      * @return Y/U/V block
      */
     private List<List<Integer>> inverseDiscreteCosineTransform(List<List<Integer>> dctValues) {
@@ -136,5 +142,98 @@ public class Decoder {
             values.add(line);
         }
         return values;
+    }
+
+    private Map<String, List<List<Block>>> performEntropyDecoding(List<Byte> byteArray) {
+        return null;
+    }
+
+    /**
+     * Obtain a list representing coefficients that should be passed to the zig-zag parser
+     *
+     * @param byteArray sublist of the encoded byteArray that contains values from a single block
+     * @return array of corresponding integer coefficients
+     */
+    private List<Integer> performRunlengthDecoding(List<Byte> byteArray) {
+        List<Integer> result = new ArrayList<>();
+
+        //read values corresponding to the DC coefficient
+        result.add(Byte.toUnsignedInt(byteArray.get(1)));
+
+        //read values corresponding to all AC coefficients
+        for (int i = 2; i < byteArray.size()-2; i++) {
+            byte runlength = byteArray.get(i);
+            byte amplitude = byteArray.get(i+2);
+            if (runlength != 0) {
+                for (int r = 0; r < runlength; r++) {
+                    result.add(0);
+                }
+            }
+            result.add(Byte.toUnsignedInt(amplitude));
+        }
+        //add missing zeros if array ends in (0,0)
+        if (byteArray.get(byteArray.size()-2) == 0 && byteArray.get(byteArray.size()-1) == 0) {
+            while (result.size() < 64) {
+                result.add(0);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Reconstruct a matrix from its zig-zag parsing representation
+     *
+     * @param coefficients array of matrix coefficients parsed in zig-zag order
+     * @return reconstructed matrix
+     */
+    private static List<List<Integer>> parseZigZag(List<Integer> coefficients) {
+        int size = (int) Math.sqrt(coefficients.size());
+
+        int index = 0;
+        List<List<Integer>> diagonals = new ArrayList<>();
+        for (int i = 1; i < size * 2; i++) {
+            int diagonalLength = i < size ? i : size * 2 - i;
+            diagonals.add(coefficients.subList(index, index + diagonalLength));
+            index += diagonalLength;
+        }
+
+        List<List<Integer>> matrix = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            matrix.add(Arrays.asList(0,0,0,0,0,0,0,0));
+        }
+
+//        for (int i = 0; i < size; i++) {
+//            for (int j = 0; j < size; j++) {
+//                int indexSum = i + j;
+//                if (indexSum % 2 == 0) {
+//                    matrix.get(i).set(j, diagonals.get(indexSum).get(diagonals.get(indexSum).size()-1));
+//                }
+//                else {
+//                    matrix.get(i).set(j, diagonals.get(indexSum).get(0));
+//                }
+//            }
+//        }
+
+//        for (int i = size-1; i >= 0; i--) {
+//            for (int j = size-1; j >= 0; j--) {
+//                int indexSum = i + j;
+//                if (indexSum % 2 == 0) {
+//                    matrix.get(i).set(j, diagonals.get(indexSum).get(0));
+//                }
+//                else {
+//                    matrix.get(i).set(j, diagonals.get(indexSum).get(diagonals.get(indexSum).size()-1));
+//                }
+//            }
+//        }
+
+        return matrix;
+    }
+
+
+    public static void main(String[] args) {
+        List<Integer> test = Arrays.asList(150, 80, 92, 26, 75, 20, 4, 18, 19, 3, 1, 2, 13, 3, 1, 0, 1, 2, 2, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        List<List<Integer>> res = parseZigZag(test);
+        int i = 0;
     }
 }

@@ -57,7 +57,10 @@ public class Encoder {
                 block.setValues(performQuantization(forwardDiscreteCosineTransform(block)))
         ));
 
-        return new EncodedImage(yBlocks, uBlocks, vBlocks);
+        //perform Entropy Encoding
+        List<Byte> encodedByteArray = performEntropyEncoding(yBlocks, uBlocks, vBlocks);
+
+        return new EncodedImage(encodedByteArray, nrBlocksW, nrBlocksH);
     }
 
 
@@ -199,5 +202,106 @@ public class Encoder {
         }
         return quantizationResult;
     }
+
+    /**
+     * Perform zig-zag parsing and runlength encoding of each Y, U and V block
+     *
+     * @param yBlocks Y blocks
+     * @param uBlocks U blocks
+     * @param vBlocks V blocks
+     * @return resulting byte array
+     */
+    private List<Byte> performEntropyEncoding(List<List<Block>> yBlocks, List<List<Block>> uBlocks, List<List<Block>> vBlocks) {
+        List<List<Byte>> byteArray = new ArrayList<>();
+
+        int nrBlocksH = yBlocks.size();
+        int nrBlocksW = yBlocks.get(0).size();
+
+        for (int i = 0; i < nrBlocksH; i++) {
+            for (int j = 0; j < nrBlocksW; j++) {
+                byteArray.add(performRunLengthEncoding(parseZigZag(yBlocks.get(i).get(j).getValues())));
+                byteArray.add(performRunLengthEncoding(parseZigZag(uBlocks.get(i).get(j).getValues())));
+                byteArray.add(performRunLengthEncoding(parseZigZag(vBlocks.get(i).get(j).getValues())));
+            }
+        }
+
+        return byteArray.stream().flatMap(List::stream).collect(Collectors.toList());
+    }
+
+
+    /**
+     * Obtain an array representing the zig-zag parsing of a matrix
+     *
+     * @param matrix input matrix
+     * @return matrix parsed in zig-zag
+     */
+    private List<Integer> parseZigZag(List<List<Integer>> matrix) {
+        int size = matrix.size();
+
+        List<List<Integer>> diagonals = new ArrayList<>();
+        for (int i = 0; i < size * 2 - 1; i++) {
+            diagonals.add(new ArrayList<>());
+        }
+
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                int indexSum = i + j;
+                if (indexSum % 2 == 0) {
+                    diagonals.get(indexSum).add(0, matrix.get(i).get(j));
+                }
+                else {
+                    diagonals.get(indexSum).add(matrix.get(i).get(j));
+                }
+            }
+        }
+
+        return diagonals.stream().flatMap(List::stream).collect(Collectors.toList());
+    }
+
+    /**
+     * Obtain an array of maximum 64*3-1 bytes by performing runlength encoding
+     *
+     * @param coefficients an array of 64 integer values
+     * @return encoded byte array
+     */
+    private List<Byte> performRunLengthEncoding(List<Integer> coefficients) {
+        List<Byte> result = new ArrayList<>();
+
+        // add size and amplitude of the DC coefficient
+        result.add(countBits(coefficients.get(0)).byteValue());
+        result.add(coefficients.get(0).byteValue());
+
+        // add runlength, size and amplitude of all AC coefficients
+        int runLengthCounter = 0;
+        for (Integer elem : coefficients.subList(1, coefficients.size())) {
+            if (elem != 0) {
+                result.add((byte) runLengthCounter);
+                result.add(countBits(elem).byteValue());
+                result.add(elem.byteValue());
+                runLengthCounter = 0;
+            }
+            else {
+                runLengthCounter++;
+            }
+        }
+        // add (0,0) if the block ends with a consecutive sequence of zeroes
+        if (runLengthCounter > 0) {
+            result.add((byte) 0);
+            result.add((byte) 0);
+        }
+
+        return result;
+    }
+
+    /**
+     * Get the number of bits needed to represent a number
+     *
+     * @param number an integer number
+     * @return number of bits
+     */
+    private Integer countBits(int number) {
+        return (int) (Math.log(number) / Math.log(2) + 1);
+    }
+
 
 }
