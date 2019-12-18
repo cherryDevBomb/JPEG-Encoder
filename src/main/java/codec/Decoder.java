@@ -158,9 +158,10 @@ public class Decoder {
         int currentIndex = 1;
         while (currentIndex < byteArray.size()) {
             currentIndex++;
+
             //63 tuples (runlength, size)(amplitude) were read or a set of 2 consecutive zeros (0,0) was found
             if (currentIndex - startIndex == 63 * 3 + 1 ||
-                    (byteArray.get(currentIndex - 1) == 0 && byteArray.get(currentIndex) == 0)) {
+                    (byteArray.get(currentIndex - 1) == 0 && byteArray.get(currentIndex) == 0) && currentIndex - startIndex > 2) {
                 List<Integer> blockBytes = byteArray.subList(startIndex, currentIndex + 1);
                 List<List<Integer>> blockValues = parseZigZag(performRunlengthDecoding(blockBytes));
                 Block block = new Block(blockValues);
@@ -180,6 +181,8 @@ public class Decoder {
      * @return array of corresponding integer coefficients
      */
     private List<Integer> performRunlengthDecoding(List<Integer> byteArray) {
+        //counter++;
+
         List<Integer> result = new ArrayList<>();
 
         //read values corresponding to the DC coefficient
@@ -275,12 +278,5 @@ public class Decoder {
         }
 
         return YUVBlocks;
-    }
-
-
-    public static void main(String[] args) {
-        List<Integer> test = Arrays.asList(150, 80, 92, 26, 75, 20, 4, 18, 19, 3, 1, 2, 13, 3, 1, 0, 1, 2, 2, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        List<List<Integer>> res = parseZigZag(test);
-        int i = 0;
     }
 }

@@ -82,7 +82,6 @@ public class PPMImage {
         }
     }
 
-
     public void writeToFile() {
         File file = new File("decodedImage.ppm");
         try {

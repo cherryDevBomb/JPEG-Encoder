@@ -265,6 +265,7 @@ public class Encoder {
      * @return encoded byte array
      */
     private List<Integer> performRunLengthEncoding(List<Integer> coefficients) {
+
         List<Integer> result = new ArrayList<>();
 
         // add size and amplitude of the DC coefficient
@@ -302,6 +303,4 @@ public class Encoder {
     private Integer countBits(int number) {
         return (int) (Math.log(Math.abs(number)) / Math.log(2) + 1);
     }
-
-
 }
