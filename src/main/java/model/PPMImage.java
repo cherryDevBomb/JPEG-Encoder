@@ -10,7 +10,7 @@ public class PPMImage {
     private static String FORMAT = "P3";
     private int width;
     private int height;
-    private int maxColorValue;
+    private int maxColorValue = 255;
     private List<List<RGB>> rgbData;
 
     public PPMImage() {

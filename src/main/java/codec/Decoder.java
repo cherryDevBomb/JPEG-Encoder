@@ -66,7 +66,6 @@ public class Decoder {
         PPMImage decodedImage = new PPMImage();
         decodedImage.setWidth(width);
         decodedImage.setHeight(height);
-        decodedImage.setMaxColorValue(255);
         decodedImage.setRgbData(rgbValues);
 
         return decodedImage;
@@ -181,8 +180,6 @@ public class Decoder {
      * @return array of corresponding integer coefficients
      */
     private List<Integer> performRunlengthDecoding(List<Integer> byteArray) {
-        //counter++;
-
         List<Integer> result = new ArrayList<>();
 
         //read values corresponding to the DC coefficient
