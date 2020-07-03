@@ -1,4 +1,4 @@
-# PPM Encoder
+# JPEG Encoder
 🎞️ Audio-Video Data Processing uni assignment
 
 ### The encoder part
